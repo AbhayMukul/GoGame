@@ -27,7 +27,6 @@
 <script> (function() {
     'use strict';
     var besogo = window.besogo = window.besogo || {}; // Establish our namespace
-    besogo.VERSION = '0.0.2-alpha';
     
     besogo.create = function(container, options) {
         var editor, // Core editor object
@@ -49,7 +48,7 @@
     
         // Process options and set defaults
         options = options || {}; // Makes option checking simpler
-        options.size = besogo.parseSize(options.size || 19);
+        options.size = besogo.parseSize(options.size || 9);
         options.coord = options.coord || 'none';
         options.tool = options.tool || 'auto';
         if (options.panels === '') {
@@ -152,15 +151,6 @@
                     // Initial width parent
                     width = (maxWidth > 0 && maxWidth < parentWidth) ? maxWidth : parentWidth,
                     height; // Initial height is undefined
-    
-                // Determine orientation if 'auto' or 'view'
-                if (orientation !== 'portrait' && orientation !== 'landscape') {
-                    if (width < minLandscapeWidth || (orientation === 'view' && width < windowHeight)) {
-                        orientation = 'portrait';
-                    } else {
-                        orientation = 'landscape';
-                    }
-                }
     
                 if (orientation === 'portrait') { // Portrait mode
                     if (!isNaN(portraitRatio)) {
@@ -645,7 +635,7 @@
     }
 
     function loadRoot(load) {
-        root = load;
+        root = load; 
         current = load;
         notifyListeners({ treeChange: true, navChange: true, stoneChange: true });
     }
@@ -2736,185 +2726,16 @@
     }
     
     })(); // END closure </script>
-<script> besogo.makeToolPanel = function(container, editor) {
-    'use strict';
-    var element, // Scratch for building SVG images
-        svg, // Scratch for building SVG images
-        labelText, // Text area for next label input
-        selectors = {}; // Holds selection rects
 
-    svg = makeButtonSVG('auto', 'Auto-play/navigate\n' +
-        'crtl+click to force ko, suicide, overwrite\n' +
-        'shift+click to jump to move'); // Auto-play/nav tool button
-    svg.appendChild(makeYinYang(0, 0));
-
-    // svg = makeButtonSVG('playB', 'Play black'); // Play black button
-    // svg.appendChild(besogo.svgStone(0, 0, -1));
-
-    // svg = makeButtonSVG('playW', 'Play white'); // Play white button
-    // svg.appendChild(besogo.svgStone(0, 0, 1));
-
-    svg = makeButtonSVG('addB', 'Set black\nctrl+click to play'); // Add black button
-    element = besogo.svgEl('g');
-    element.appendChild(besogo.svgStone(0, 0, -1)); // Black stone
-    // element.appendChild(besogo.svgPlus(0, 0, besogo.RED)); // Red plus
-    svg.appendChild(element);
-
-    svg = makeButtonSVG('addW', 'Set white\nctrl+click to play'); // Add white button
-    element = besogo.svgEl('g');
-    element.appendChild(besogo.svgStone(0, 0, 1)); // White stone
-    // element.appendChild(besogo.svgPlus(0, 0, besogo.RED)); // Red plus
-    svg.appendChild(element);
-
-    svg = makeButtonSVG('addE', 'Set empty point'); // Add empty button
-    element = besogo.svgEl('g');
-    element.appendChild(besogo.svgStone(0, 0)); // Grey stone
-    element.appendChild(besogo.svgCross(0, 0, besogo.RED)); // Red cross
-    svg.appendChild(element);
-
-    
-
-    
-
-   
-
-   
-
-    
-
-    labelText = document.createElement("input"); // Label entry text field
-    labelText.type = "text";
-    labelText.title = 'Next label';
-    labelText.onblur = function() {
-        editor.setLabel(labelText.value);
-    };
-    labelText.addEventListener('keydown', function(evt) {
-        evt = evt || window.event;
-        evt.stopPropagation(); // Stop keydown propagation when in focus
-    });
-    container.appendChild(labelText);
-
-    makeButtonText('Pass', 'Pass move', function(){
-        var tool = editor.getTool();
-        if (tool !== 'navOnly' && tool !== 'auto' && tool !== 'playB' && tool !== 'playW') {
-            editor.setTool('auto'); // Ensures that a move tool is selected
-        }
-        editor.click(0, 0, false); // Clicking off the board signals a pass
-    });
-
-    
-
-    makeButtonText('Cut', 'Remove branch', function(){
-        editor.cutCurrent();
-    });
-
-    editor.addListener(toolStateUpdate); // Set up listener for tool state updates
-    toolStateUpdate({ label: editor.getLabel(), tool: editor.getTool() }); // Initialize
-
-
-    // Creates a button holding an SVG image
-    function makeButtonSVG(tool, tooltip) {
-        var button = document.createElement('button'),
-            svg = besogo.svgEl('svg', { // Icon container
-                width: '100%',
-                height: '100%',
-                viewBox: '-55 -55 110 110' }), // Centered on (0, 0)
-            selected = besogo.svgEl("rect", { // Selection rectangle
-                x: -50, // Center on (0, 0)
-                y: -50,
-                width: 100,
-                height: 100,
-                fill: 'none',
-                'stroke-width': 8,
-                stroke: besogo.GOLD,
-                rx: 20, // Rounded rectangle
-                ry: 20, // Thanks, Steve
-                visibility: 'hidden'
-            });
-
-        container.appendChild(button);
-        button.appendChild(svg);
-        button.onclick = function() {
-            if (tool === 'auto' && editor.getTool() === 'auto') {
-                editor.setTool('navOnly');
-            } else {
-                editor.setTool(tool);
-            }
-        };
-        button.title = tooltip;
-        selectors[tool] = selected;
-        svg.appendChild(selected);
-        return svg; // Returns reference to the icon container
-    }
-
-    // Creates text button
-    function makeButtonText(text, tip, callback) {
-        var button = document.createElement('input');
-        button.type = 'button';
-        button.value = text;
-        button.title = tip;
-        button.onclick = callback;
-        container.appendChild(button);
-    }
-
-    // Callback for updating tool state and label
-    function toolStateUpdate(msg) {
-        var tool;
-        if (msg.label) {
-            labelText.value = msg.label;
-        }
-        if (msg.tool) {
-            for (tool in selectors) { // Update which tool is selected
-                if (selectors.hasOwnProperty(tool)) {
-                    if (msg.tool === tool) {
-                        selectors[tool].setAttribute('visibility', 'visible');
-                    } else {
-                        selectors[tool].setAttribute('visibility', 'hidden');
-                    }
-                }
-            }
-        }
-    }
-
-    // Draws a yin yang
-    function makeYinYang(x, y) {
-        var element = besogo.svgEl('g');
-
-        // Draw black half circle on right side
-        element.appendChild( besogo.svgEl("path", {
-            d: "m" + x + "," + (y - 44) + " a44 44 0 0 1 0,88z",
-            stroke: "none",
-            fill: "black"
-        }));
-
-        // Draw white part of ying yang on left side
-        element.appendChild( besogo.svgEl("path", {
-            d: "m" + x + "," + (y + 44) + "a44 44 0 0 1 0,-88a22 22 0 0 1 0,44z",
-            stroke: "none",
-            fill: "white"
-        }));
-
-        // Draw round part of black half of ying yang
-        element.appendChild( besogo.svgEl("circle", {
-            cx: x,
-            cy: y + 22,
-            r: 22,
-            stroke: "none",
-            fill: "black"
-        }));
-
-        return element;
-    }
-}; </script>
 <script> besogo.makeFilePanel = function(container, editor) {
     'use strict';
     var fileChooser, // Reference to the file chooser element
         element, // Scratch variable for creating elements
         WARNING = "Everything not saved will be lost";
 
-    makeNewBoardButton(9); // New 9x9 board button
-    makeNewBoardButton(13); // New 13x13 board button
-    makeNewBoardButton(19); // New 19x19 board button
+    // makeNewBoardButton(9); // New 9x9 board button
+    // makeNewBoardButton(13); // New 13x13 board button
+    // makeNewBoardButton(19); // New 19x19 board button
     // makeNewBoardButton('?'); // New custom board button
 
     // Hidden file chooser element
@@ -3092,12 +2913,14 @@
         rightElements.push(makeNavButton('Next node', '15,10 15,90 85,50', function() {
             editor.nextNode(1);
         }));
+
         rightElements.push(makeNavButton('Jump forward',
             '5,10 50,50 50,10 95,50 50,90 50,50 5,90',
             function() {
                 editor.nextNode(10);
             })
         );
+
         rightElements.push(makeNavButton('Last node',
             '95,10 95,90 75,90 75,50 5,90 5,10 75,50 75,10',
             function() {
@@ -3105,12 +2928,12 @@
             })
         );
 
-        siblingElements.push(makeNavButton('Previous sibling', '10,85 90,85 50,15', function() {
-            editor.nextSibling(-1);
-        }));
-        siblingElements.push(makeNavButton('Next sibling', '10,15 90,15 50,85', function() {
-            editor.nextSibling(1);
-        }));
+        // siblingElements.push(makeNavButton('Previous sibling', '10,85 90,85 50,15', function() {
+        //     editor.nextSibling(-1);
+        // }));
+        // siblingElements.push(makeNavButton('Next sibling', '10,15 90,15 50,85', function() {
+        //     editor.nextSibling(1);
+        // }));
 
         function makeNavButton(tooltip, pointString, action) { // Creates a navigation button
             var button = document.createElement('button'),
@@ -3139,6 +2962,7 @@
         variantStyleButton.onclick = function() {
             editor.toggleVariantStyle(false); // Toggles child/sibling variants
         };
+
         container.appendChild(variantStyleButton);
         svg = makeButtonContainer();
         variantStyleButton.appendChild(svg);
@@ -3148,6 +2972,7 @@
             "stroke-width": 5,
             fill: 'none'
         });
+
         svg.appendChild(element);
         childVariantElement = besogo.svgEl('circle', {
             cx: 25,
@@ -3155,12 +2980,14 @@
             r: 20,
             stroke: 'none'
         });
+
         svg.appendChild(childVariantElement);
         siblingVariantElement = besogo.svgEl('circle', {
             cx: 75,
             cy: 25,
             r: 20,
             stroke: 'none'});
+
         svg.appendChild(siblingVariantElement);
         element = besogo.svgEl('circle', {
             cx: 75,
@@ -3169,12 +2996,14 @@
             fill: besogo.RED,
             stroke: 'none'
         });
+
         svg.appendChild(element);
 
         hideVariantButton = document.createElement('button');
         hideVariantButton.onclick = function() {
             editor.toggleVariantStyle(true); // Toggles show/hide variants
         };
+
         container.appendChild(hideVariantButton);
         svg = makeButtonContainer();
         hideVariantButton.appendChild(svg);
@@ -3187,10 +3016,12 @@
             editor.toggleCoordStyle(); // Toggles coordinate style
         };
         coordStyleButton.title = 'Toggle coordinates';
+        
         container.appendChild(coordStyleButton);
         svg = makeButtonContainer();
         coordStyleButton.appendChild(svg);
         svg.appendChild(besogo.svgLabel(50, 50, 'black', '四4'));
+        
     } // END function drawStyleButtons
 
     // Makes an SVG container for the button graphics
@@ -3202,6 +3033,7 @@
         });
     }
 }; </script>
+
 <script> besogo.makeNamesPanel = function(container, editor) {
     'use strict';
     var playerBox = document.createElement('div'),
@@ -3268,451 +3100,6 @@
             parent.removeChild(parent.firstChild);
         }
         parent.appendChild(textNode);
-    }
-}; </script>
-<script> besogo.makeCommentPanel = function(container, editor) {
-    'use strict';
-    var infoTexts = {}, // Holds text nodes for game info properties
-        gameInfoTable = document.createElement('table'),
-        gameInfoEdit = document.createElement('table'),
-        commentBox = document.createElement('div'),
-        commentEdit = document.createElement('textarea'),
-        playerInfoOrder = 'PW WR WT PB BR BT'.split(' '),
-        infoOrder = 'HA KM RU TM OT GN EV PC RO DT RE ON GC AN US SO CP'.split(' '),
-        infoIds = {
-            PW: 'White Player',
-            WR: 'White Rank',
-            WT: 'White Team',
-            PB: 'Black Player',
-            BR: 'Black Rank',
-            BT: 'Black Team',
-
-            HA: 'Handicap',
-            KM: 'Komi',
-            RU: 'Rules',
-            TM: 'Timing',
-            OT: 'Overtime',
-
-            GN: 'Game Name',
-            EV: 'Event',
-            PC: 'Place',
-            RO: 'Round',
-            DT: 'Date',
-
-            RE: 'Result',
-            ON: 'Opening',
-            GC: 'Comments',
-
-            AN: 'Annotator',
-            US: 'Recorder',
-            SO: 'Source',
-            CP: 'Copyright'
-        };
-
-    container.appendChild(makeInfoButton());
-    container.appendChild(makeInfoEditButton());
-    container.appendChild(makeCommentButton());
-    container.appendChild(gameInfoTable);
-    container.appendChild(gameInfoEdit);
-    infoTexts.C = document.createTextNode('');
-    container.appendChild(commentBox);
-    commentBox.appendChild(infoTexts.C);
-    container.appendChild(commentEdit);
-
-    commentEdit.onblur = function() {
-        editor.setComment(commentEdit.value);
-    };
-    commentEdit.addEventListener('keydown', function(evt) {
-        evt = evt || window.event;
-        evt.stopPropagation(); // Stop keydown propagation when in focus
-    });
-
-    editor.addListener(update);
-    update({ navChange: true, gameInfo: editor.getGameInfo() });
-    gameInfoEdit.style.display = 'none'; // Hide game info editting table initially
-
-    function update(msg) {
-        var temp; // Scratch for strings
-
-        if (msg.navChange) {
-            temp = editor.getCurrent().comment || '';
-            updateText(commentBox, temp, 'C');
-            if (editor.getCurrent() === editor.getRoot() &&
-                gameInfoTable.firstChild &&
-                gameInfoEdit.style.display === 'none') {
-                    gameInfoTable.style.display = 'table';
-            } else {
-                gameInfoTable.style.display = 'none';
-            }
-            commentEdit.style.display = 'none';
-            commentBox.style.display = 'block';
-        } else if (msg.comment !== undefined) {
-            updateText(commentBox, msg.comment, 'C');
-            commentEdit.value = msg.comment;
-        }
-
-        if (msg.gameInfo) { // Update game info
-            updateGameInfoTable(msg.gameInfo);
-            updateGameInfoEdit(msg.gameInfo);
-        }
-    } // END function update
-
-    function updateGameInfoTable(gameInfo) {
-        var table = document.createElement('table'),
-            i, id, row, cell, text; // Scratch iteration variable
-
-        table.className = 'besogo-gameInfo';
-        for (i = 0; i < infoOrder.length ; i++) { // Iterate in specified order
-            id = infoOrder[i];
-
-            if (gameInfo[id]) { // Only add row if property exists
-                row = document.createElement('tr');
-                table.appendChild(row);
-
-                cell = document.createElement('td');
-                cell.appendChild(document.createTextNode(infoIds[id]));
-                row.appendChild(cell);
-
-                cell = document.createElement('td');
-                text = document.createTextNode(gameInfo[id]);
-                cell.appendChild(text);
-                row.appendChild(cell);
-            }
-        }
-        if (!table.firstChild || gameInfoTable.style.display === 'none') {
-            table.style.display = 'none'; // Do not display empty table or if already hidden
-        }
-        container.replaceChild(table, gameInfoTable);
-        gameInfoTable = table;
-    }
-
-    function updateGameInfoEdit(gameInfo) {
-        var table = document.createElement('table'),
-            infoTableOrder = playerInfoOrder.concat(infoOrder),
-            i, id, row, cell, text;
-
-        table.className = 'besogo-gameInfo';
-        for (i = 0; i < infoTableOrder.length ; i++) { // Iterate in specified order
-            id = infoTableOrder[i];
-            row = document.createElement('tr');
-            table.appendChild(row);
-
-            cell = document.createElement('td');
-            cell.appendChild(document.createTextNode(infoIds[id]));
-            row.appendChild(cell);
-
-            cell = document.createElement('td');
-            text = document.createElement('input');
-            if (gameInfo[id]) {
-                text.value = gameInfo[id];
-            }
-            text.onblur = function(t, id) {
-                return function() { // Commit change on blur
-                    editor.setGameInfo(t.value, id);
-                };
-            }(text, id);
-            text.addEventListener('keydown', function(evt) {
-                evt = evt || window.event;
-                evt.stopPropagation(); // Stop keydown propagation when in focus
-            });
-            cell.appendChild(text);
-            row.appendChild(cell);
-        }
-        if (gameInfoEdit.style.display === 'none') {
-            table.style.display = 'none'; // Hide if already hidden
-        }
-        container.replaceChild(table, gameInfoEdit);
-        gameInfoEdit = table;
-    }
-
-    function updateText(parent, text, id) {
-        var textNode = document.createTextNode(text);
-        parent.replaceChild(textNode, infoTexts[id]);
-        infoTexts[id] = textNode;
-    }
-
-    function makeInfoButton() {
-        var button = document.createElement('input');
-        button.type = 'button';
-        button.value = 'Info';
-        button.title = 'Show/hide game info';
-
-        button.onclick = function() {
-            if (gameInfoTable.style.display === 'none' && gameInfoTable.firstChild) {
-                gameInfoTable.style.display = 'table';
-            } else {
-                gameInfoTable.style.display = 'none';
-            }
-            gameInfoEdit.style.display = 'none';
-        };
-        return button;
-    }
-
-    function makeInfoEditButton() {
-        var button = document.createElement('input');
-        button.type = 'button';
-        button.value = 'Edit Info';
-        button.title = 'Edit game info';
-
-        button.onclick = function() {
-            if (gameInfoEdit.style.display === 'none') {
-                gameInfoEdit.style.display = 'table';
-            } else {
-                gameInfoEdit.style.display = 'none';
-            }
-            gameInfoTable.style.display = 'none';
-        };
-
-        return button;
-    }
-
-    function makeCommentButton() {
-        var button = document.createElement('input');
-        button.type = 'button';
-        button.value = 'Comment';
-        button.title = 'Edit comment';
-
-        button.onclick = function() {
-            if (commentEdit.style.display === 'none') { // Comment edit box hidden
-                commentBox.style.display = 'none'; // Hide static comment display
-                gameInfoTable.style.display = 'none'; // Hide game info table
-                commentEdit.value = editor.getCurrent().comment;
-                commentEdit.style.display = 'block'; // Show comment edit box
-            } else { // Comment edit box open
-                commentEdit.style.display = 'none'; // Hide comment edit box
-                commentBox.style.display = 'block'; // Show static comment display
-            }
-        };
-        return button;
-    }
-
-}; </script>
-<script> besogo.makeTreePanel = function(container, editor) {
-    'use strict';
-    var svg,
-        pathGroup,
-        bottomLayer,
-        currentMarker,
-        SCALE = 0.25; // Tree size scaling factor
-
-    rebuildNavTree();
-    editor.addListener(treeUpdate);
-
-
-    // Callback for handling tree changes
-    function treeUpdate(msg) {
-        if (msg.treeChange) { // Tree structure changed
-            rebuildNavTree(); // Rebuild entire tree
-        } else if (msg.navChange) { // Only navigation changed
-            updateCurrentMarker(); // Update current location marker
-        } else if (msg.stoneChange) { // Only stones in current changed
-            updateCurrentNodeIcon();
-        }
-    }
-
-    // Updates the current marker in the tree
-    function updateCurrentMarker() {
-        var current = editor.getCurrent();
-
-        setSelectionMarker(currentMarker);
-        setCurrentMarker(current.navTreeMarker);
-    }
-
-    // Sets marker element to indicate the current node
-    function setCurrentMarker(marker) {
-        var width = container.clientWidth,
-            height = container.clientHeight,
-            top = container.scrollTop,
-            left = container.scrollLeft,
-            markX = (marker.getAttribute('x') - 5) * SCALE, // Computed position of marker
-            markY = (marker.getAttribute('y') - 5) * SCALE,
-            GRIDSIZE = 120 * SCALE; // Size of the square grid
-
-        if (markX < left) { // Ensure horizontal visibility of current marker
-            container.scrollLeft = markX;
-        } else if (markX + GRIDSIZE > left + width) {
-            container.scrollLeft = markX + GRIDSIZE - width;
-        }
-        if (markY < top) { // Ensure vertical visibility of current marker
-            container.scrollTop = markY;
-        } else if (markY + GRIDSIZE > top + height) {
-            container.scrollTop = markY + GRIDSIZE - height;
-        }
-
-        marker.setAttribute('opacity', 1); // Always visible
-        marker.onmouseover = null; // Clear hover over action
-        marker.onmouseout = null; // Clear hover off action
-        bottomLayer.appendChild(marker); // Moves marker to the background
-        currentMarker = marker;
-    }
-
-    // Sets marker
-    function setSelectionMarker(marker) {
-        marker.setAttribute('opacity', 0); // Normally invisible
-        marker.onmouseover = function() { // Show on hover over
-            marker.setAttribute('opacity', 0.5);
-        };
-        marker.onmouseout = function() { // Hide on hover off
-            marker.setAttribute('opacity', 0);
-        };
-        svg.appendChild(marker); // Move marker to foreground
-    }
-
-    // Rebuilds the entire navigation tree
-    function rebuildNavTree() {
-        var current = editor.getCurrent(), // Current location in game state tree
-            root = editor.getRoot(), // Root node of game state
-            nextOpen = [], // Tracks occupied grid positions
-            oldSvg = svg, // Store the old SVG root
-            background = besogo.svgEl("rect", { // Background color for tree
-                height: '100%',
-                width: '100%',
-                'class': 'besogo-svg-board besogo-svg-backer'
-            }),
-            path, // Root path
-            width, // Calculated dimensions of the SVG
-            height;
-
-        svg = besogo.svgEl("svg");
-        bottomLayer = besogo.svgEl("g"); // Holder for the current marker
-        pathGroup = besogo.svgEl("g"); // Holder for path elements
-
-        svg.appendChild(background); // Background color first
-        svg.appendChild(bottomLayer); // Bottom layer (for current marker) second
-        svg.appendChild(pathGroup); // Navigation path third
-
-        path = recursiveTreeBuild(root, 0, 0, nextOpen); // Build the tree
-        pathGroup.appendChild(finishPath(path, 'black')); // Finish and add root path
-
-        width = 120 * nextOpen.length; // Compute height and width of nav tree
-        height = 120 * Math.max.apply(Math, nextOpen);
-        svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
-        svg.setAttribute('height', height * SCALE); // Scale down the actual SVG size
-        svg.setAttribute('width', width * SCALE);
-
-        if (oldSvg) { // Replace SVG in container
-            container.replaceChild(svg, oldSvg);
-        } else { // SVG not yet added to container
-            container.appendChild(svg);
-        }
-
-        setCurrentMarker(current.navTreeMarker); // Set current marker and ensure visible
-    } // END function rebuildNavTree
-
-    // Recursively builds the tree
-    function recursiveTreeBuild(node, x, y, nextOpen) {
-        var children = node.children,
-            position,
-            path,
-            childPath,
-            i; // Scratch iteration variable
-
-        if (children.length === 0) { // Reached end of branch
-            path = 'm' + svgPos(x) + ',' + svgPos(y); // Start path at end of branch
-        } else { // Current node has children
-            position = (nextOpen[x + 1] || 0); // First open spot in next column
-            position = (position < y) ? y : position; // Bring level with current y
-
-            if (y < position - 1) { // Check if first child natural drop > 1
-                y = position - 1; // Bring current y within 1 of first child drop
-            }
-            // Place first child and extend path
-            path = recursiveTreeBuild(children[0], x + 1, position, nextOpen) +
-                extendPath(x, y, nextOpen);
-
-            // Place other children (intentionally starting at i = 1)
-            for (i = 1; i < children.length; i++) {
-                position = nextOpen[x + 1];
-                childPath = recursiveTreeBuild(children[i], x + 1, position, nextOpen) +
-                    extendPath(x, y, nextOpen, position - 1);
-                // End path at beginning of branch
-                pathGroup.appendChild(finishPath(childPath, 'black'));
-            }
-        }
-        svg.appendChild(makeNodeIcon(node, x, y));
-        addSelectionMarker(node, x, y);
-
-        nextOpen[x] = y + 1; // Claims (x, y)
-        return path;
-    } // END function recursiveTreeBuild
-
-    function makeNodeIcon(node, x, y) { // Makes a node icon for the tree
-        var element,
-            color;
-
-        switch(node.getType()){
-            case 'move': // Move node
-                color = node.move.color;
-                element = besogo.svgEl("g");
-                element.appendChild( besogo.svgStone(svgPos(x), svgPos(y), color) );
-                color = (color === -1) ? "white" : "black";
-                element.appendChild( besogo.svgLabel(svgPos(x), svgPos(y), color,
-                    '' + node.moveNumber) );
-                break;
-            case 'setup': // Setup node
-                element = besogo.svgEl("g");
-                element.appendChild(besogo.svgStone(svgPos(x), svgPos(y))); // Grey stone
-                element.appendChild(besogo.svgPlus(svgPos(x), svgPos(y), besogo.RED));
-                break;
-            default: // Empty node
-                element = besogo.svgStone(svgPos(x), svgPos(y)); // Grey stone
-        }
-        node.navTreeIcon = element; // Save icon reference in game state tree
-        node.navTreeX = x; // Save position of the icon
-        node.navTreeY = y;
-
-        return element;
-    } // END function makeNodeIcon
-
-    function updateCurrentNodeIcon() { // Updates the current node icon
-        var current = editor.getCurrent(), // Current location in game state tree
-            oldIcon = current.navTreeIcon,
-            newIcon = makeNodeIcon(current, current.navTreeX, current.navTreeY);
-        svg.replaceChild(newIcon, oldIcon);
-    }
-
-    function addSelectionMarker(node, x, y) {
-        var element = besogo.svgEl("rect", { // Create selection marker
-            x: svgPos(x) - 55,
-            y: svgPos(y) - 55,
-            width: 110,
-            height: 110,
-            fill: besogo.TURQ
-        });
-        element.onclick = function() {
-            editor.setCurrent(node);
-        };
-
-        node.navTreeMarker = element; // Save selection marker in node
-        setSelectionMarker(element); // Add as and set selection marker properties
-    }
-
-    function extendPath(x, y, nextOpen, prevChildPos) { // Extends path from child to current
-        var childPos = nextOpen[x + 1] - 1; // Position of child
-        if (childPos === y) { // Child is horizontally level with current
-            return 'h-120'; // Horizontal line back to current
-        } else if (childPos === y + 1) { // Child is one drop from current
-            return 'l-120,-120'; // Diagonal drop line back to current
-        } else if (prevChildPos && prevChildPos !== y) {
-            // Previous is already dropped, extend back to previous child drop line
-            return 'l-60,-60v-' + (120 * (childPos - prevChildPos));
-        } else { // Extend double-bend drop line back to parent
-            return 'l-60,-60v-' + (120 * (childPos - y - 1)) + 'l-60,-60';
-        }
-    }
-
-    function finishPath(path, color) { // Finishes path element
-        var element = besogo.svgEl("path", {
-            d: path,
-            stroke: color,
-            "stroke-width": 8,
-            fill: "none"
-        });
-        return element;
-    }
-
-    function svgPos(x) { // Converts (x, y) coordinates to SVG position
-        return (x * 120) + 60;
     }
 }; </script>
 
